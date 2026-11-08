@@ -44,6 +44,9 @@
     "check": "node --check lib/index.js && node --check lib/domain.js && node --check lib/types.js"
   },
   "dependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-storage": "^0.2.2-rc.1",
+    "@deepseek-ai/dsh-storage-domain": "^0.2.2-rc.1",
     "zod": "^4.4.3"
   },
   "dsh": {

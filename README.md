@@ -27,10 +27,11 @@ DLS is the **queue layer**, not the transport layer.
 | --- | --- |
 | Data model | done |
 | Persistent domain | done |
-| `download_status` | minimal implementation |
-| Queue engine | todo |
-| Transport (aria2 / Node fallback) | todo |
-| Remaining six tools | todo |
+| Transport (aria2 JSON-RPC + single-stream fallback) | done |
+| Queue engine (scheduling, ownership, pause reasons, checkpoints, recovery) | done |
+| Seven tools | done |
+| Real DSH install / verification | next |
+| User panel (v3) | later |
 
 ## Tools (planned)
 
