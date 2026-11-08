@@ -1,0 +1,16 @@
+# dsh-dl-server bundle patch
+- insert:
+    - id: dsh-dl-server
+      name: 'dsh-dl-server'
+      config:
+        maxConcurrentJobs: 3
+        connectionsPerJob: 16
+        aria2Path: ''
+        aria2Port: 16801
+        speedLimitKbps: 0
+        proxy: ''
+        defaultDownloadDir: ''
+        checkpointSeconds: 30
+        autoResumeOnSessionReopen: true
+        autoResumeOnHostRestart: true
+        keepCompletedRecords: 200
