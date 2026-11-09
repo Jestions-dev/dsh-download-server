@@ -3,15 +3,39 @@
 English | [中文](README.zh.md)
 
 **DLS** — DSH Download Server
-A global download service for DeepSeek Harness: visible across sessions, owned per session, persistent queue, pausable and resumable.
+A persistent download queue for DeepSeek Harness.
 
-> DLS is all you need
+> Downloads should not live inside a session.
+
+---
+
+## Install
+
+### From the UI (recommended)
+
+```
+Settings → Plugins → Install a third-party plugin → Add plugin
+```
+
+Type **`dsh-dl-server`**, confirm, then **restart DSH once**.
+
+### From the command line
+
+```sh
+dsh plugin add dsh-dl-server
+```
+
+> `dsh` must be on your PATH. The desktop build ships one at
+> `…\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd`; if you have never added it, use the UI path.
+
+**Requires DSH 0.2.1-rc.5 or newer.**
+**aria2 is optional** — install it for 16-way segmented downloading, or skip it and the plugin falls back to a single-stream transfer. Same features, less speed.
 
 ---
 
 ## Why
 
-Every existing DSH downloader is one tool function that blocks until the file lands. They make downloads **fast**; they don't solve three things:
+Most DSH downloaders are one tool function that blocks until the file lands. They make downloads **fast**; they don't solve three things:
 
 - the download dies when the session or the turn ends
 - there is no queue, no pause, no resume
@@ -19,27 +43,76 @@ Every existing DSH downloader is one tool function that blocks until the file la
 
 DLS is the **queue layer**, not the transport layer.
 
-## Status
+```
+Jobs live in DSH, not in a session.
+```
 
-`v0.1` — scaffold. Design: [SPEC.md](SPEC.md).
+A download started in one session is visible to every other session — progress, destination, everything. But only the session that started it can pause, resume, or cancel it.
 
-| Module | State |
+---
+
+## The seven tools
+
+| Tool | What it does |
 | --- | --- |
-| Data model | done |
-| Persistent domain | done |
-| Transport (aria2 JSON-RPC + single-stream fallback) | done |
-| Queue engine (scheduling, ownership, pause reasons, checkpoints, recovery) | done |
-| Seven tools | done |
-| Real DSH install / verification | done (DSH 0.2.1-rc.5) |
-| Hermetic tests (`npm test`) | done |
-| User panel (v3) | later |
+| `download_enqueue` | Queue a job, **return immediately** with a job id |
+| `download_status` | Inspect the queue or a single job (`J#1042`) |
+| `download_wait` | Block until a job reaches a terminal state, with a timeout |
+| `download_pause` | Pause, **keeping the bytes already on disk** |
+| `download_resume` | Continue from the last checkpoint |
+| `download_cancel` | Cancel, optionally dropping the partial file |
+| `download_cleanup` | Drop records (the default scope leaves downloaded files alone) |
 
-## Tools (planned)
+## Example
 
 ```
-download_enqueue    download_status     download_wait
-download_pause      download_resume     download_cancel
-download_cleanup
+You:   download these two PDFs into D:\Papers and tell me when they're done
+```
+
+The agent calls `download_enqueue` twice and gets `J#10` / `J#11` back, then `download_wait`.
+
+Because enqueue returns immediately, it can fire off ten downloads without waiting for any of them.
+
+---
+
+## Measured
+
+Same machine, same file:
+
+| Setup | Throughput |
+| --- | --- |
+| TUNA mirror · single connection | 43.98 MB/s |
+| TUNA mirror · 16 threads (another plugin) | 54.20 MB/s |
+| TUNA mirror · **DLS** | **61.08 MB/s** (saturates a 500 Mbps link) |
+| HuggingFace · single-stream fallback | 1.00 MB/s |
+| HuggingFace · **DLS** | **6.96 MB/s** (7×) |
+
+The last row is the point: **on a per-connection-throttled host, segmentation beats bandwidth.**
+
+---
+
+## Behaviour worth knowing
+
+- **Ownership is per session.** Any session on the machine can *see* every job; only the owner can mutate one.
+- **`cleanup(scope="all")` deletes files.** The default `allWithoutFiles` only drops records.
+- **Checkpoints live in DSH storage**, not as lock files dropped into your home directory — the plugin does not depend on `TMPDIR` or the working directory.
+- **When aria2 is unavailable** the transport degrades to a single Node stream. No features lost, some speed lost.
+
+---
+
+## Docs
+
+- [SPEC.md](SPEC.md) — the 565-line design doc: comparison with four sibling plugins, what was borrowed from PCL2, and the v1 trade-offs
+- [CONTRIBUTING.md](CONTRIBUTING.md) — layout, how to run the tests, what not to touch
+- [SECURITY.md](SECURITY.md) — how to report a vulnerability, and what counts as one
+
+## Roadmap
+
+```
+v1    queue + persistence + seven tools + aria2 transport   ← released
+v1.1  disk headroom / silent failures / session fairness / mirrors
+v2    shell interception / torrents / own segmented engine / content addressing
+v3    user panel + callbacks into the agent
 ```
 
 ## License
