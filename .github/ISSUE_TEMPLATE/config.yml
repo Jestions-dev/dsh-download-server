@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞（私密报告）
+    url: https://github.com/Jestions-dev/dsh-download-server/security/advisories/new
+    about: 路径穿越、越权、凭据泄漏这类问题请不要开公开 Issue
+
+  - name: 装不上 / 装了没反应
+    url: https://github.com/Jestions-dev/dsh-download-server/blob/main/CONTRIBUTING.md
+    about: 先确认两件事：插件在 dsh.profile.bundles 里吗？重启过 DSH 吗？
+
+  - name: 想一起改代码
+    url: https://github.com/Jestions-dev/dsh-download-server/blob/main/CONTRIBUTING.md
+    about: 代码布局、测试怎么跑、哪些地方别乱动
+
+  - name: 看规格书（为什么这么设计）
+    url: https://github.com/Jestions-dev/dsh-download-server/blob/main/SPEC.md
+    about: 565 行的设计说明，含四个同类插件的对比和 v1 的取舍

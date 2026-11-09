@@ -1,0 +1,59 @@
+name: Feature request / 功能建议
+description: 想要的能力、想接的源、想改的行为
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先看一眼路线图，可能已经在计划里了：
+
+        | 方向 | 版本 |
+        | --- | --- |
+        | 镜像表（GitHub / HF / PyPI 前缀映射） | v1.1 |
+        | 拦截 shell 里的下载命令、种子 / magnet、自研分段引擎、内容寻址 | v2 |
+        | 用户面板、面板操作回传 agent | v3 |
+
+        如果和上面某个方向重合，说一句「属于 v2」就行，不用重复设计。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的是什么问题
+      description: 先说问题，再说解决方案。只写方案的话，维护者没法判断有没有更简单的做法
+      placeholder: |
+        我在 DSH 里下模型权重，同一个文件被三个会话各下了一遍，
+        磁盘上出现三份。问题是：队列不认内容，只认路径。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你希望它怎么工作
+      description: 越具体越好 —— 调用什么工具、传什么参数、期望返回什么
+      placeholder: |
+        希望 enqueue 时算一下 sha256，已经在盘上就直接返回已有路径，
+        不再下一遍。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 你觉得这属于
+      options:
+        - v1.1（小改动）
+        - v2（传输与策略）
+        - v3（界面）
+        - 不确定，你判断
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 你现在是怎么绕过去的
+      description: 有 workaround 的话说一下 —— 它能反映真实的疼度
+    validations:
+      required: false

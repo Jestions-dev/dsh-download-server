@@ -1,0 +1,109 @@
+name: Bug report / 问题反馈
+description: 装了但没反应、任务卡住、文件不对、报错 —— 都在这里说
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先说三件事，能省掉一半来回：
+
+        1. **`dsh-dl-server` 在 `dsh.profile.bundles` 里吗？** 用 `link:` 本地目录装的话不会自动登记，不登记就永远不会挂载。
+        2. **重启过 DSH 吗？** 新装的 bundle 要重启一次才组装。
+        3. **`download_status` 能调用吗？** 不能的话是注册失败，不是下载失败 —— 这两件事的排查方向完全不同。
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本
+      description: "`npm view dsh-dl-server version`，或 profile 里 `node_modules/dsh-dl-server/package.json` 的 version"
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本
+      description: 桌面版看「关于」，命令行跑 `dsh --version`。注意 profile 实际装的版本可能和文档不一样
+      placeholder: "0.2.1-rc.5"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 系统
+      placeholder: "Windows 11 24H2 / macOS 15.1 / Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: aria2
+    attributes:
+      label: 装了 aria2 吗
+      description: 没装也能下，但会走单流兜底，速度差很多
+      options:
+        - 装了，在 PATH 里
+        - 装了，但不确定插件找不找得到
+        - 没装
+        - 不知道
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: 卡在哪一步
+      options:
+        - 装了但工具根本不出现
+        - 工具在，但 download_enqueue 报错
+        - 任务能入队，但一直 queued 不动
+        - 下到一半失败 / 卡住
+        - 下完了但文件不对（大小、内容、打不开）
+        - pause / resume 有问题
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 具体发生了什么
+      description: 做了什么 → 期望什么 → 实际什么
+      placeholder: |
+        我调了 download_enqueue 下 https://...，期望返回 jobId，
+        实际返回 {"ok":false,"code":"..."}。
+    validations:
+      required: true
+
+  - type: textarea
+    id: tool-output
+    attributes:
+      label: 工具的原始返回值
+      description: 直接贴 JSON。`download_status` 的输出最有价值 —— 里面有 bytesDone / state / pauseReason
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 启动日志 / 报错
+      description: |
+        启动标记写在临时目录的 `dls-boot.log` 里，这是最快确认「插件到底有没有激活」的东西：
+
+        Windows: `type %TEMP%\dls-boot.log`
+        macOS / Linux: `cat "${TMPDIR:-/tmp}/dls-boot.log"`
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已经在 `dsh.profile.bundles` 里确认过这个插件
+        - label: 我重启过 DSH
+        - label: 我翻过 README 和 SECURITY.md
