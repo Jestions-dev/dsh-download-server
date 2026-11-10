@@ -1,6 +1,6 @@
 {
   "name": "dsh-dl-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DLS — DSH Download Server: a global, session-aware, persistent download queue for DeepSeek Harness.",
   "type": "module",
   "main": "lib/index.js",
@@ -14,7 +14,7 @@
     "cordis.patch.yml",
     "LICENSE",
     "README.md",
-    "README.en.md"
+    "README.zh.md"
   ],
   "keywords": [
     "deepseek-harness",
@@ -37,17 +37,26 @@
     "url": "https://github.com/Jestions-dev/dsh-download-server/issues"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.1 <0.3.0-0"
   },
   "scripts": {
     "test": "node --test",
     "check": "node --check lib/index.js && node --check lib/domain.js && node --check lib/types.js"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "~4.1.0",
-    "@deepseek-ai/dsh-storage": "^0.2.2-rc.1",
-    "@deepseek-ai/dsh-storage-domain": "^0.2.2-rc.1",
     "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-storage-domain": ">=0.2.0-rc.1 <0.3.0-0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-storage-domain": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-storage-domain": "^0.2.2-rc.1"
   },
   "dsh": {
     "bundle": {
