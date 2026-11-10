@@ -17,18 +17,22 @@
 设置 → 插件 → 安装第三方插件 → 添加插件
 ```
 
-输入框里填 **`dsh-dl-server`**，确认，然后**重启一次 DSH**。
+输入框里填 **`dsh-dl-server@0.1.1`**，确认，然后**重启一次 DSH**。
 
 ### 方式二：命令行
 
 ```sh
-dsh plugin add dsh-dl-server
+dsh plugin add dsh-dl-server@0.1.1
 ```
+
+> **带上 `@0.1.1`。** `0.1.0` 把 `@deepseek-ai/dsh-storage-domain` 声明成了普通依赖，pnpm 会给插件装第二份，服务和宿主对不上、插件挂不住（全部 `pending`）。0.1.1 改成 `peerDependencies` 已修复。
+>
+> 另外 pnpm 会缓存 registry 元数据 —— 不带版本号时可能仍然解析到 `0.1.0`。
 
 > `dsh` 需要先在 PATH 里。桌面版自带的那份在
 > `…\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd`，没加过 PATH 的话用方式一。
 
-**要求 DSH 0.2.1-rc.5 或以上。**
+**要求 DSH 0.2.1 或以上。**
 **aria2 可选** —— 装了走 16 线程分段，没装走单流兜底，一样能下，只是慢一些。
 
 ---

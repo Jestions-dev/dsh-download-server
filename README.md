@@ -17,13 +17,17 @@ A persistent download queue for DeepSeek Harness.
 Settings → Plugins → Install a third-party plugin → Add plugin
 ```
 
-Type **`dsh-dl-server`**, confirm, then **restart DSH once**.
+Type **`dsh-dl-server@0.1.1`**, confirm, then **restart DSH once**.
 
 ### From the command line
 
 ```sh
-dsh plugin add dsh-dl-server
+dsh plugin add dsh-dl-server@0.1.1
 ```
+
+> **Pin the version.** `0.1.0` declared `@deepseek-ai/dsh-storage-domain` as a regular dependency, so pnpm installed a second copy inside the plugin; the injected service then no longer matched the host and the plugin never mounted (every service stayed `pending`). `0.1.1` moves it to `peerDependencies`.
+>
+> pnpm also caches registry metadata — without an explicit version you may still resolve `0.1.0`.
 
 > `dsh` must be on your PATH. The desktop build ships one at
 > `…\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd`; if you have never added it, use the UI path.
