@@ -123,12 +123,19 @@ The last row is the point: **on a per-connection-throttled host, segmentation be
 
 ## Roadmap
 
-```
-v1    queue + persistence + seven tools + aria2 transport   ← released
-v1.1  disk headroom / silent failures / session fairness / mirrors
-v2    shell interception / torrents / own segmented engine / content addressing
-v3    user panel + callbacks into the agent
-```
+The roadmap names product stages (`v1`, `v1.1`, `v1.2`, `v2`); npm versions follow semver. They do not map one-to-one — use this table:
+
+| npm | Roadmap | Content | Status |
+| --- | --- | --- | --- |
+| `0.1.x` | v1 | queue + persistence + seven tools + aria2 transport | released |
+| `0.2.x` | v1.1 | mirrors / mirror cooldown / size-aware concurrency / session fairness / disk budget / loud failures | released |
+| `0.3.x` | v1.2 | queue de-duplication / mirror self-verification | planned |
+| `1.0.0` | v2 | shell interception / torrents / own segmented engine / content addressing | planned |
+| `1.1.x` | v3 | user panel + callbacks into the agent | planned |
+
+**Why 0.x lasts until v2:** `1.0.0` means "the tool names and config keys will not change incompatibly". Only v2 touches the transport and the tool set, so that is where 1.0 belongs.
+
+**You never have to do the conversion yourself** — install the latest and you get the newest milestone.
 
 ## License
 
