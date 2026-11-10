@@ -1,6 +1,6 @@
 {
   "name": "dsh-dl-server",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DLS — DSH Download Server: a global, session-aware, persistent download queue for DeepSeek Harness.",
   "type": "module",
   "main": "lib/index.js",
