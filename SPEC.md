@@ -516,9 +516,111 @@ dsh-dl-server:
 ## 11. 路线
 
 ```
-v1  队列 + 持久化 + 七个工具 + aria2 传输       ← 现在
-v2  拦截钩子 / 种子 / 自研分段 / 内容寻址
-v3  用户面板 + 操作回传（agent.inject）
+v1    队列 + 持久化 + 七个工具 + aria2 传输       ← 已发布
+v1.1  余量 / 静默失败 / 会话公平 / 镜像 / 分档     ← 已实现
+v2    拦截钩子 / 种子 / 自研分段 / 内容寻址
+v3    用户面板 + 操作回传（agent.inject）
+```
+
+---
+
+## 11.1 v1.1（已实现）
+
+六项。前两项修 v1 的缺陷，后四项是新增能力。**`transport.js` 只动了「选通道 + 选连接数」这一处，传输逻辑本身没碰。**
+
+### ① 磁盘余量累加检查
+
+入队时不再只看「当前剩余 ≥ 512 MB」，而是：
+
+```
+需要 = 512 MB 保底
+     + 所有非终态作业还差多少（已知大小用真值，未知按 256 MB 估）
+     + 本次作业（expectedBytes 或 256 MB 估）
+```
+
+不够就 `QueueError('disk-full')`，错误信息带上 `512 MB 保底 + N MB 已在队列 + M MB 本次 / 只剩 X MB，差 Y MB`。
+
+**为什么**：一次入 20 个任务，每个单看都「够」，加起来写满盘。
+
+### ② 静默失败改成显式
+
+**(a) 断点写失败** —— 原来 `.catch(() => {})` 吞掉，断点没落盘却无人知情，下次续传从旧位置重来，文件就坏了。现在累加 `storage.errors`、记 `lastError`，第 3 次时打一条 `error` 日志，并通过 `download_status` 暴露：
+
+```json
+"storage": { "errors": 3, "lastError": "J#12: storage is read-only", "lastAt": 1794283232002 }
+```
+
+**(b) 生命周期写失败不再炸** —— `#fail` / `#stopAs` / `#finish` / 孤儿清理 / 启动恢复这些路径改用 `#persist()`，写失败只计数不抛。**这条是测试逼出来的**：存储坏掉时 `close()` 会抛异常，把整个关闭流程打断。
+
+**(c) 目标目录不可写** —— 入队在下载**开始前**就验：从 `destPath` 往上找到第一个存在的目录，`fs.access(W_OK)`。`EACCES/EPERM` → `QueueError('permission-denied')`。`ENOENT` 时继续往上（父目录不存在是正常的，传输时会 `mkdir -p`）。
+
+### ③ 会话级公平（争用才限额）
+
+原来 `#pump()` 是全局 FIFO，只限总数。一个会话占满 3 个槽，别人的小任务干等半小时。
+
+现在：
+
+```
+只有 1 个会话在排队   不限额，独占全部槽位（不牺牲单人速度）
+≥ 2 个会话在排队     每会话上限 = max(1, floor(maxConcurrentJobs / 2))
+                     按会话轮转取，而不是按 seq 全局排队
+```
+
+### ④ 镜像表
+
+新文件 `lib/mirrors.js`，纯函数、无网络、无状态。
+
+| URL 特征 | 追加的镜像 |
+| --- | --- |
+| `huggingface.co/<path>` | `hf-mirror.com/<path>` |
+| `github.com/<o>/<r>/releases/download/…` | `ghproxy.net/https://github.com/…` |
+| `raw.githubusercontent.com/<path>` | `raw.gitmirror.com/<path>` |
+| `files.pythonhosted.org/packages/…` | `pypi.tuna.tsinghua.edu.cn/packages/…` |
+
+约束：**原地址永远排第一**（镜像只是兜底）；**只追加不替换**；已是镜像域名的不再展开；展开结果写进作业记录的 `mirrors` 字段，`download_status` 里能看见用了哪条规则。
+
+> **它证明不了同源。** 第三方镜像可以返回旧版本、HTML 错误页甚至被投毒的字节 —— 只有 `expectSha256` 能证明。⑤ 的冷却只是把「明显坏的」排到后面，防的是无心之失，不是投毒。要更强的保证得做「长度 + ETag 自证同源」（HEAD 两次），留给后续版本。
+
+### ⑤ 失败的镜像冷却
+
+传输层每试完一个 URL 就报 `onUrlResult(url, ok)`，队列按 **host** 记账：
+
+```
+同一 host 连续失败 2 次 → 冷却 10 分钟
+冷却期内          #orderUrls 把含该 host 的 URL 排到最后
+成功一次          计数清零
+不持久化          重启归零，避免把临时故障记成永久拉黑
+```
+
+`download_status` 暴露 `mirrorHealth: [{ host, fails, cooldownUntil }]`，只列正在冷却的。
+
+### ⑥ 并发按文件大小分档
+
+`transport.js` 的 `planTransfer()`：
+
+```
+未知大小    8 连接         ← 保守中间值
+< 1 MB     不走 aria2，直连
+1–8 MB     4 连接
+≥ 8 MB     16 连接（受 connectionsCap 约束）
+```
+
+大小从哪来：`transfer()` 先发一次 HEAD 探 `Content-Length`（5 秒超时，失败不算错）。探不到就退回「未知」档 —— 不探就永远分不了档，探失败也不能阻塞下载。
+
+> 依据：同类插件 dsh-smart-dl 的实测（每连接限速 2MB/s，3 轮取中位数）——
+> 8MB 文件 x=4 是 6.26 MB/s、x=8 是 11.99；32MB 同样翻倍；2MB 文件 x=2 就到顶。
+> 它还记录了不引入 16 的理由：x=16 更快，但容易触发服务器按 IP 限并发。
+
+### 验收（`test/v11.test.mjs`，10 例）
+
+```
+镜像展开        原地址在前 / 四条规则 / 幂等 / 未知 host 不动
+分档            500KB→直连、4MB→4、50MB→16、未知→8、受 cap 约束
+余量累加        1200MB 空闲时，第二条 900MB 任务被拒
+目录不可写      EACCES → permission-denied，且发生在传输之前
+断点失败        存储只读时 storage.errors 增长并带 lastError
+会话公平        单会话可用满槽位；两会话时各拿一个
+镜像冷却        失败两次进冷却、成功清零、health 可见
 ```
 
 ---

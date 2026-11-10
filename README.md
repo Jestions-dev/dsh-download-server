@@ -67,6 +67,17 @@ A download started in one session is visible to every other session — progress
 | `download_cancel` | Cancel, optionally dropping the partial file |
 | `download_cleanup` | Drop records (the default scope leaves downloaded files alone) |
 
+## New in 0.2.0
+
+| | |
+| --- | --- |
+| **Mirror expansion** | GitHub Releases / HuggingFace / raw.githubusercontent / PyPI URLs gain a fallback mirror automatically. The original always stays first. |
+| **Mirror cooldown** | Two consecutive failures on one host parks it for 10 minutes instead of retrying it on every job. |
+| **Size-aware concurrency** | Under 1 MB skips aria2 entirely; 1–8 MB runs 4 connections; only 8 MB and up gets 16. |
+| **Session fairness** | When two sessions queue at once they share the slots instead of one of them taking the whole queue. |
+| **Cumulative disk budget** | Enqueue counts what already-queued jobs still need, so a batch cannot quietly fill the disk. |
+| **Failures are no longer silent** | Checkpoint write errors are counted and surfaced in `download_status` under `storage`; an unwritable destination is refused before the transfer starts. |
+
 ## Example
 
 ```
