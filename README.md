@@ -78,6 +78,15 @@ A download started in one session is visible to every other session — progress
 | **Cumulative disk budget** | Enqueue counts what already-queued jobs still need, so a batch cannot quietly fill the disk. |
 | **Failures are no longer silent** | Checkpoint write errors are counted and surfaced in `download_status` under `storage`; an unwritable destination is refused before the transfer starts. |
 
+## New in 0.3.0
+
+| | |
+| --- | --- |
+| **Queue de-duplication** | One destination is never downloaded twice. A finished job is reused while its file is still on disk; a different source claiming the same path fails with `dest-in-use`. |
+| **Mirror self-verification** | Before a mirror is used, it is HEADed once: the length must equal the origin's, and when the origin advertises an ETag the mirror's must match too. |
+
+> A mirror is a third party and serves whatever it likes. Length plus ETag catches a cached older build or an HTML error page; it does **not** catch a poisoned copy. Only `sha256` proves content, which is why mirrors are a fallback and not a guarantee.
+
 ## Example
 
 ```

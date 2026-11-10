@@ -203,44 +203,36 @@ test('a failing checkpoint write is reported instead of swallowed', async () => 
 
 // ---------------------------------------------------------------- ③ fairness
 
-test('two sessions share the slots instead of one taking them all', async () => {
+test('a session that queued a batch does not starve the other one', async () => {
   const started = []
-  const { queue } = makeQueue({
-    config: { maxConcurrentJobs: 2 },
-    transport: {
-      transfer: async (options) => {
-        started.push(options.destPath)
-        await new Promise(() => {})
-      },
+  /** @type {Map<string, () => void>} */
+  const releases = new Map()
+  const transport = {
+    transfer: async (options) => {
+      started.push(options.destPath)
+      await new Promise((resolve) => releases.set(options.destPath, () => resolve({ bytes: 1, total: 1 })))
+      return { bytes: 1, total: 1 }
     },
-  })
+  }
+  const { queue } = makeQueue({ config: { maxConcurrentJobs: 1 }, transport })
   const dir = await scratchDir()
   try {
-    // Session A queues two jobs first, so a plain FIFO would start both of them.
-    await queue.enqueue({ urls: ['https://example.com/a1.bin'], destPath: path.join(dir, 'a1.bin') }, caller('session-a'))
-    await queue.enqueue({ urls: ['https://example.com/a2.bin'], destPath: path.join(dir, 'a2.bin') }, caller('session-a'))
+    // Session A grabs the only slot; both sessions then have work queued.
+    const a1 = await queue.enqueue({ urls: ['https://example.com/a1.bin'], destPath: path.join(dir, 'a1.bin') }, caller('session-a'))
     await tick(20)
-    assert.equal(started.length, 2, 'a lone session may use every slot')
+    await queue.enqueue({ urls: ['https://example.com/a2.bin'], destPath: path.join(dir, 'a2.bin') }, caller('session-a'))
+    await queue.enqueue({ urls: ['https://example.com/b1.bin'], destPath: path.join(dir, 'b1.bin') }, caller('session-b'))
+    await tick(20)
 
-    started.length = 0
-    const { queue: queue2 } = makeQueue({
-      config: { maxConcurrentJobs: 2 },
-      transport: {
-        transfer: async (options) => {
-          started.push(options.destPath)
-          await new Promise(() => {})
-        },
-      },
-    })
-    await queue2.enqueue({ urls: ['https://example.com/x1.bin'], destPath: path.join(dir, 'x1.bin') }, caller('session-x'))
-    await queue2.enqueue({ urls: ['https://example.com/x2.bin'], destPath: path.join(dir, 'x2.bin') }, caller('session-x'))
-    await queue2.enqueue({ urls: ['https://example.com/y1.bin'], destPath: path.join(dir, 'y1.bin') }, caller('session-y'))
-    await tick(30)
+    assert.deepEqual(started.map((p) => path.basename(p)), ['a1.bin'], 'only one slot exists')
 
-    assert.equal(started.length, 2, 'only two slots exist')
-    const fromY = started.filter((p) => path.basename(p).startsWith('y'))
-    assert.equal(fromY.length, 1, 'the queueing laggard must get a slot while the other session is busy')
-    await queue2.close()
+    // Freeing the slot must hand it to the other session, not to A's second job.
+    releases.get(path.join(dir, 'a1.bin'))?.()
+    await queue.wait(a1.id, 5000)
+    await tick(40)
+
+    assert.equal(started.length, 2)
+    assert.equal(path.basename(started[1]), 'b1.bin', 'round-robin must not keep serving the same session')
   } finally {
     await queue.close()
     await fs.rm(dir, { recursive: true, force: true })
