@@ -17,17 +17,17 @@
 设置 → 插件 → 安装第三方插件 → 添加插件
 ```
 
-输入框里填 **`dsh-dl-server@0.1.1`**，确认，然后**重启一次 DSH**。
+输入框里填 **`dsh-dl-server@0.4.0`**，确认，然后**重启一次 DSH**。
 
 ### 方式二：命令行
 
 ```sh
-dsh plugin add dsh-dl-server@0.1.1
+dsh plugin add dsh-dl-server@0.4.0
 ```
 
-> **带上 `@0.1.1`。** `0.1.0` 把 `@deepseek-ai/dsh-storage-domain` 声明成了普通依赖，pnpm 会给插件装第二份，服务和宿主对不上、插件挂不住（全部 `pending`）。0.1.1 改成 `peerDependencies` 已修复。
+> **带上版本号。** `0.1.0` 把 `@deepseek-ai/dsh-storage-domain` 声明成了普通依赖，pnpm 会给插件装第二份，服务和宿主对不上、插件挂不住（全部 `pending`）。0.1.1 改成 `peerDependencies` 已修复。
 >
-> 另外 pnpm 会缓存 registry 元数据 —— 不带版本号时可能仍然解析到 `0.1.0`。
+> 另外 pnpm 会缓存 registry 元数据 —— 不带版本号时可能仍然解析到旧版本。
 
 > `dsh` 需要先在 PATH 里。桌面版自带的那份在
 > `…\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd`，没加过 PATH 的话用方式一。
@@ -87,6 +87,22 @@ DLS 做的是**队列层**，不是传输层。
 
 > 镜像是第三方，它给什么我们不知道。长度 + ETag 能挡住「缓存了旧版本」「返回了错误页」这类问题，**挡不住投毒** —— 那只有 `sha256` 做得到。所以镜像只是兜底，真要保证内容就对 `sha256`。
 
+## 0.4.0 新增
+
+| | |
+| --- | --- |
+| **自定义请求头** | `download_enqueue` 多了个可选 `headers` —— `Referer` / `Cookie` / `User-Agent`，站点要什么给什么。原始探测、每个镜像探测、aria2 下载、单流兜底，四处都会带 |
+| **入队时就校验** | 换行、控制符、非法名字、超过 32 条、以及传输层自己管的（`Range` / `Host` / `Content-Length` …）一律报 `header-invalid`，**一个字节都不会动** |
+| **输出脱敏** | 值可能是登录 cookie。任务输出只列名字（`"requestHeaders": ["Referer"]`），值只留在传输层和本地存储里 |
+
+**为什么需要它**：有些 URL 完全正确就是下不了。B站媒体 CDN 对**不带 `Referer: https://www.bilibili.com` 的请求一律 403**，镜像再多也没用 —— 这就是 `curl -H` 存在的理由。
+
+```
+download_enqueue  urls=[...]  dest=...  headers={"Referer": "https://www.bilibili.com"}
+```
+
+**断点续传照样能用**：header 跟 job 一起持久化，DSH 重启后接着下仍然会带上。
+
 ## 用它
 
 ```
@@ -132,13 +148,14 @@ agent 会调 `download_enqueue` 两次拿到 `J#10` / `J#11`，然后 `download_
 
 ## 路线
 
-路线图用 `v1 / v1.1 / v1.2 / v2` 讲产品阶段，npm 版本按语义化版本走。两者对不上一一对应，查这张表：
+路线图用 `v1 / v1.1 / v1.2 / v1.3 / v2` 讲产品阶段，npm 版本按语义化版本走。两者对不上一一对应，查这张表：
 
 | npm 版本 | 路线图 | 内容 | 状态 |
 | --- | --- | --- | --- |
 | `0.1.x` | v1 | 队列 + 持久化 + 七个工具 + aria2 传输 | 已发布 |
 | `0.2.x` | v1.1 | 镜像表 / 镜像冷却 / 并发分档 / 会话公平 / 磁盘余量 / 失败显式化 | 已发布 |
-| `0.3.x` | v1.2 | 队列去重 / 镜像自证同源 | 计划 |
+| `0.3.x` | v1.2 | 队列去重 / 镜像自证同源 | 已发布 |
+| `0.4.x` | v1.3 | 自定义请求头（`Referer` / `Cookie` / `User-Agent`）：每次尝试都带，入队时校验，输出只列名字 | 已发布 |
 | `1.0.0` | v2 | 拦截 shell 下载 / 种子与磁力 / 自研分段引擎 / 内容寻址 | 计划 |
 | `1.1.x` | v3 | 用户面板 + 操作回传 agent | 计划 |
 

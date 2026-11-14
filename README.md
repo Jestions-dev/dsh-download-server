@@ -17,17 +17,17 @@ A persistent download queue for DeepSeek Harness.
 Settings → Plugins → Install a third-party plugin → Add plugin
 ```
 
-Type **`dsh-dl-server@0.1.1`**, confirm, then **restart DSH once**.
+Type **`dsh-dl-server@0.4.0`**, confirm, then **restart DSH once**.
 
 ### From the command line
 
 ```sh
-dsh plugin add dsh-dl-server@0.1.1
+dsh plugin add dsh-dl-server@0.4.0
 ```
 
 > **Pin the version.** `0.1.0` declared `@deepseek-ai/dsh-storage-domain` as a regular dependency, so pnpm installed a second copy inside the plugin; the injected service then no longer matched the host and the plugin never mounted (every service stayed `pending`). `0.1.1` moves it to `peerDependencies`.
 >
-> pnpm also caches registry metadata — without an explicit version you may still resolve `0.1.0`.
+> pnpm also caches registry metadata — without an explicit version you may still resolve an older release.
 
 > `dsh` must be on your PATH. The desktop build ships one at
 > `…\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd`; if you have never added it, use the UI path.
@@ -87,6 +87,22 @@ A download started in one session is visible to every other session — progress
 
 > A mirror is a third party and serves whatever it likes. Length plus ETag catches a cached older build or an HTML error page; it does **not** catch a poisoned copy. Only `sha256` proves content, which is why mirrors are a fallback and not a guarantee.
 
+## New in 0.4.0
+
+| | |
+| --- | --- |
+| **Custom request headers** | `download_enqueue` takes an optional `headers` object — `Referer`, `Cookie`, `User-Agent`, anything the host wants. Sent on the origin probe, on every mirror probe, on the aria2 download and on the single-stream fallback. |
+| **Validated at enqueue** | Line breaks, control characters, illegal names, more than 32 headers, and transport-owned names (`Range`, `Host`, `Content-Length`, …) are rejected with `header-invalid` **before** any bytes move. |
+| **Redacted in output** | Values may be session cookies. Job output lists names only (`"requestHeaders": ["Referer"]`); the values stay in the transfer layer and the local store. |
+
+Why it matters: some URLs are correct and still refuse to download. Bilibili's media CDN answers **403 to any request without `Referer: https://www.bilibili.com`** — no number of mirrors helps. This is the same reason `curl -H` exists.
+
+```
+download_enqueue  urls=[...]  dest=...  headers={"Referer": "https://www.bilibili.com"}
+```
+
+Resume still works: headers are persisted with the job, so a download interrupted by a DSH restart sends them again.
+
 ## Example
 
 ```
@@ -132,13 +148,14 @@ The last row is the point: **on a per-connection-throttled host, segmentation be
 
 ## Roadmap
 
-The roadmap names product stages (`v1`, `v1.1`, `v1.2`, `v2`); npm versions follow semver. They do not map one-to-one — use this table:
+The roadmap names product stages (`v1`, `v1.1`, `v1.2`, `v1.3`, `v2`); npm versions follow semver. They do not map one-to-one — use this table:
 
 | npm | Roadmap | Content | Status |
 | --- | --- | --- | --- |
 | `0.1.x` | v1 | queue + persistence + seven tools + aria2 transport | released |
 | `0.2.x` | v1.1 | mirrors / mirror cooldown / size-aware concurrency / session fairness / disk budget / loud failures | released |
-| `0.3.x` | v1.2 | queue de-duplication / mirror self-verification | planned |
+| `0.3.x` | v1.2 | queue de-duplication / mirror self-verification | released |
+| `0.4.x` | v1.3 | custom request headers (`Referer` / `Cookie` / `User-Agent`) on every attempt, validated at enqueue, redacted in output | released |
 | `1.0.0` | v2 | shell interception / torrents / own segmented engine / content addressing | planned |
 | `1.1.x` | v3 | user panel + callbacks into the agent | planned |
 
