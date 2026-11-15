@@ -33,7 +33,16 @@ dsh plugin add dsh-dl-server@0.4.0
 > `…\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd`; if you have never added it, use the UI path.
 
 **Requires DSH 0.2.1-rc.5 or newer.**
-**aria2 is optional** — install it for 16-way segmented downloading, or skip it and the plugin falls back to a single-stream transfer. Same features, less speed.
+**aria2 is optional but strongly recommended** — install it for 16-way segmented downloading. Without it the plugin falls back to a single-stream transfer: same features, roughly a tenth of the speed. The plugin warns at startup and reports the reason through `download_status`, so a slow first install is not a mystery.
+
+| Platform | Install aria2 |
+| --- | --- |
+| Windows | `winget install aria2.aria2` |
+| Ubuntu / Debian | `sudo apt install aria2` |
+| Fedora | `sudo dnf install aria2` |
+| Arch | `sudo pacman -S aria2` |
+| macOS | `brew install aria2` |
+
 
 ---
 
@@ -136,7 +145,7 @@ The last row is the point: **on a per-connection-throttled host, segmentation be
 - **Ownership is per session.** Any session on the machine can *see* every job; only the owner can mutate one.
 - **`cleanup(scope="all")` deletes files.** The default `allWithoutFiles` only drops records.
 - **Checkpoints live in DSH storage**, not as lock files dropped into your home directory — the plugin does not depend on `TMPDIR` or the working directory.
-- **When aria2 is unavailable** the transport degrades to a single Node stream. No features lost, some speed lost.
+- **When aria2 is unavailable** the transport degrades to a single Node stream. No features lost, some speed lost — and the plugin says so instead of staying quiet, because a silent 10× slowdown looks like a bug.
 
 ---
 
@@ -156,6 +165,7 @@ The roadmap names product stages (`v1`, `v1.1`, `v1.2`, `v1.3`, `v2`); npm versi
 | `0.2.x` | v1.1 | mirrors / mirror cooldown / size-aware concurrency / session fairness / disk budget / loud failures | released |
 | `0.3.x` | v1.2 | queue de-duplication / mirror self-verification | released |
 | `0.4.x` | v1.3 | custom request headers (`Referer` / `Cookie` / `User-Agent`) on every attempt, validated at enqueue, redacted in output | released |
+| `0.4.1` | patch | missing aria2 is now a loud, actionable warning instead of a silent speed cliff; `download_status` reports the channel | released |
 | `1.0.0` | v2 | shell interception / torrents / own segmented engine / content addressing | planned |
 | `1.1.x` | v3 | user panel + callbacks into the agent | planned |
 

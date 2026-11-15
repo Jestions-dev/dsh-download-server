@@ -33,7 +33,16 @@ dsh plugin add dsh-dl-server@0.4.0
 > `…\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd`，没加过 PATH 的话用方式一。
 
 **要求 DSH 0.2.1 或以上。**
-**aria2 可选** —— 装了走 16 线程分段，没装走单流兜底，一样能下，只是慢一些。
+**aria2 可选，但强烈建议装** —— 装了走 16 线程分段；没装走单流兜底，功能一个不少，速度大约只有十分之一。没装时插件会在启动日志里明确警告，`download_status` 也会报出原因，不会让你以为"DLS 就这速度"。
+
+| 平台 | 装 aria2 |
+| --- | --- |
+| Windows | `winget install aria2.aria2` |
+| Ubuntu / Debian | `sudo apt install aria2` |
+| Fedora | `sudo dnf install aria2` |
+| Arch | `sudo pacman -S aria2` |
+| macOS | `brew install aria2` |
+
 
 ---
 
@@ -156,6 +165,7 @@ agent 会调 `download_enqueue` 两次拿到 `J#10` / `J#11`，然后 `download_
 | `0.2.x` | v1.1 | 镜像表 / 镜像冷却 / 并发分档 / 会话公平 / 磁盘余量 / 失败显式化 | 已发布 |
 | `0.3.x` | v1.2 | 队列去重 / 镜像自证同源 | 已发布 |
 | `0.4.x` | v1.3 | 自定义请求头（`Referer` / `Cookie` / `User-Agent`）：每次尝试都带，入队时校验，输出只列名字 | 已发布 |
+| `0.4.1` | 补丁 | 没装 aria2 从"静默变慢"改成"明确警告 + 安装命令"；`download_status` 能看出走的哪条通道 | 已发布 |
 | `1.0.0` | v2 | 拦截 shell 下载 / 种子与磁力 / 自研分段引擎 / 内容寻址 | 计划 |
 | `1.1.x` | v3 | 用户面板 + 操作回传 agent | 计划 |
 

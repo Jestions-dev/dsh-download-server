@@ -848,6 +848,36 @@ aria2     aria2.addUri 的 options.header = ["Name: Value", ...]
 **不做**：不内置站点规则（不硬编码 bilibili 的 Referer）、不做 cookie 管理、不猜 Referer。
 
 ---
+
+## 11.4 补丁 0.4.1：aria2 缺失必须说出来
+
+**问题**：没装 aria2 时传输层静默降级到单流。功能正常，速度约 1/10。用户的结论不是"我没装 aria2"，而是"DLS 就这速度"，然后卸载。
+
+**这不是性能问题，是信息问题**：降级本身是对的（必须能下），沉默是错的。
+
+```
+检测     findAria2 已经会在 config / 环境变量 / PATH / 常见安装位置里找
+行为     找不到 → aria2Missing = true，log 用 warn 级（不是 info）
+文案     带上按平台分的安装命令：winget / apt / dnf / pacman / brew
+出口     modeInfo() → { mode, aria2Missing, hint }
+         由 Queue.health() 带进 download_status 的输出
+```
+
+**约束**：
+
+```
+不抛错        缺 aria2 不能挡住任何下载
+不改行为      仍然降级到单流，只是现在说清楚了
+不改体积      不把 aria2 打进 npm 包
+              （win-x64 / linux-x64 / linux-arm64 / mac-x64 / mac-arm64 六份，
+               压缩约 15 MB；且 aria2 是 GPLv2，混进 MIT 包要连带源码与许可）
+```
+
+**验证**：`test/aria2-hint.test.mjs` 五个用例 —— 平台文案、降级不抛错、warn 级别、hint 透出、health 带出、旧桩不崩。
+
+**后续可选**：首次运行时用 DLS 自己下载 aria2 到插件家目录（平台对应的静态构建 + 校验和）。留到 0.5 再说，先把"说出来"做到。
+
+---
 ## 12. 验收标准（v1）
 
 ```
